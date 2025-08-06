@@ -1,0 +1,16 @@
+{
+  "google_api_key": "AIzaSyCxw0dvpErPm_sPyrhSrod-WBWDzVLg_ng",
+  "gemini_model": "gemini-2.5-flash",
+  "url_context_tool": true,
+  "max_history_messages": 30,
+  "policy_urls": [
+    "https://www.aetna.com/cpb/medical/data/1_99/0016.html",
+    "https://www.aetna.com/cpb/medical/data/100_199/0165.html",
+    "https://www.aetna.com/cpb/medical/data/700_799/0737.html"
+  ],
+  "page_title": "Medical Policy Assistant",
+  "page_icon": "🏥",
+  "layout": "wide",
+  "sidebar_state": "auto",
+  "theme_base": "light"
+}
