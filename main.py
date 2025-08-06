@@ -35,7 +35,11 @@ class PolicyChatApp:
             messages = []
             
             # Add system message with medical policy context
-            system_prompt = """You job is to get most relevent information for the questions asked. Use the source context urls to grab all the contextable information for the queries to answers and use the chat history for understand the current discussion."""
+            # Use configurable system prompt if provided, otherwise use default
+            if self.config.system_prompt.strip():
+                system_prompt = self.config.system_prompt
+            else:
+                system_prompt = """Your job is to extract the most relevant information from the provided context URLs to answer user questions. Use only what is explicitly stated in those documents — do not make assumptions, guesses, or provide answers beyond the given evidence. If the answer is not clearly supported by the context, respond with "Not mentioned in the provided policy." Always refer to the chat history to maintain context."""
             messages.append(SystemMessage(content=system_prompt))
             
             # Add policy URLs context if enabled
@@ -245,6 +249,19 @@ def main():
         
         # Configuration settings
         st.header("⚙️ Settings")
+        
+        # System prompt setting
+        st.subheader("💬 System Prompt")
+        current_system_prompt = config.system_prompt if config.system_prompt else ""
+        new_system_prompt = st.text_area(
+            "Custom System Prompt:",
+            value=current_system_prompt,
+            height=150,
+            placeholder="Enter custom system prompt (leave empty to use default)",
+            help="Customize how the AI responds. Leave empty to use the default medical policy assistant prompt."
+        )
+        if new_system_prompt != config.system_prompt:
+            config_manager.update_config({"system_prompt": new_system_prompt})
         
         # Max history messages setting
         new_max_messages = st.number_input(
