@@ -39,7 +39,7 @@ class PolicyChatApp:
             if self.config.system_prompt.strip():
                 system_prompt = self.config.system_prompt
             else:
-                system_prompt = """Your job is to extract the most relevant information from the provided context URLs to answer user questions. Use only what is explicitly stated in those documents — do not make assumptions, guesses, or provide answers beyond the given evidence. If the answer is not clearly supported by the context, respond with "Not mentioned in the provided policy." Always refer to the chat history to maintain context."""
+                system_prompt = """Your job is to extract the most relevant information from the provided context URLs to answer user questions. Always use evidence-based answers from the given policy documents. Refer to chat history to maintain contextual awareness. When answering, use only information supported by the provided context URLs."""
             messages.append(SystemMessage(content=system_prompt))
             
             # Add policy URLs context if enabled
