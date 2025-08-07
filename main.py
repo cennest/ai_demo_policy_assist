@@ -147,7 +147,7 @@ class PolicyChatApp:
                 )
                 
                 query_time = time.time() - start_time
-                st.write(f"⏱️ Response generated in {query_time:.2f} seconds")
+                #st.write(f"⏱️ Response generated in {query_time:.2f} seconds")
                 
             except Exception as api_error:
                 # Handle API-specific errors
@@ -263,10 +263,10 @@ def get_or_create_chat_app(config_manager: ConfigManager) -> PolicyChatApp:
         
         # Show status message
         status = st.session_state.chat_app.get_status()
-        if status["ready"]:
-            st.success("✅ Chat app initialized successfully!")
-        else:
-            st.warning(f"⚠️ Chat app created but not ready: {status['last_error']}")
+        # if status["ready"]:
+        #     st.success("✅ Chat app initialized successfully!")
+        # else:
+        #     st.warning(f"⚠️ Chat app created but not ready: {status['last_error']}")
     else:
         # Refresh existing app's configuration
         st.session_state.chat_app.refresh_config()
@@ -494,21 +494,20 @@ def main():
                         st.error("❌ Please enter a valid URL starting with http:// or https://")
             
             # Display current URLs with enhanced management
-            st.subheader("Current Policy URLs:")
+            
+            st.subheader("📎 Policy URLs")
             if config.policy_urls:
                 for i, url in enumerate(config.policy_urls):
-                    with st.container():
-                        col1, col2 = st.columns([5, 1])
-                        with col1:
-                            # Show truncated URL with tooltip
-                            display_url = url[:50] + "..." if len(url) > 50 else url
-                            st.text(display_url)
-                            if len(url) > 50:
-                                st.caption(f"Full URL: {url}")
+                    with st.expander(f"URL {i+1}: {url[:30]}...", expanded=False):
+                        # Display the URL
+                        st.code(url, language=None)
+                        
+                        # Add delete button
+                        col1, col2 = st.columns([3, 1])
                         with col2:
-                            if st.button("🗑️", key=f"remove_{i}", use_container_width=True, help=f"Delete {url}"):
+                            if st.button("🗑️ Delete", key=f"remove_{i}", help="Delete this URL"):
                                 if config_manager.remove_policy_url(url):
-                                    st.success("URL removed")
+                                    st.success("URL deleted successfully!")
                                     st.rerun()
             else:
                 st.info("No policy URLs configured yet")

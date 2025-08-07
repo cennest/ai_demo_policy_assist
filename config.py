@@ -64,7 +64,7 @@ class ConfigManager:
         if not self.config.google_api_key:
             print("Warning: GOOGLE_API_KEY not found in environment or config")
     
-    def save_config(self, include_api_key: bool = False) -> None:
+    def save_config(self, include_api_key: bool = True) -> None:
         """Save current configuration to file"""
         try:
             config_dict = asdict(self.config)

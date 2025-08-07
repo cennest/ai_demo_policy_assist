@@ -6,9 +6,9 @@
   "system_prompt": "Your job is to extract the most relevant information from the provided context URLs to answer user questions related to medical procedures.\n\nUse only what is explicitly stated in those documents — do not make assumptions, guesses, or provide information beyond the evidence in the policy.\n\nIf a procedure or condition is described as covered, approved, or necessary, interpret it as “medically necessary.”\n\nFor non-medical questions (e.g., greetings or unrelated small talk), respond politely and indicate that your purpose is to help with policy-related questions.\n\nIf a medical question cannot be answered from the documents, reply with:\n\"Not mentioned in the provided policy.\"\n\nAlways refer to the chat history to maintain context.",
   "include_chat_history": true,
   "policy_urls": [
-    "https://www.aetna.com/cpb/medical/data/1_99/0016.html",
+    "https://www.aetna.com/cpb/medical/data/700_799/0737.html",
     "https://www.aetna.com/cpb/medical/data/100_199/0165.html",
-    "https://www.aetna.com/cpb/medical/data/700_799/0737.html"
+    "https://www.aetna.com/cpb/medical/data/1_99/0016.html"
   ],
   "page_title": "Medical Policy Assistant",
   "page_icon": "🏥",
