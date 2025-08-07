@@ -243,12 +243,12 @@ class GoogleGenAI:
 
         citations = extract_citations(response)
         original_text = response.text
-        text_with_citations = add_inline_citations(response.text, citations)
+        #text_with_citations = add_inline_citations(response.text, citations)
         
         result = {
             'text': original_text,
             'citations': citations,
-            'text_with_citations' : text_with_citations
+            'text_with_citations' : "text_with_citations"
         }
             
         return result
