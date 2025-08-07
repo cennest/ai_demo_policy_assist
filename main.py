@@ -61,7 +61,7 @@ class PolicyChatApp:
             )
             
             # Return the text with inline citations if available
-            return result.get('text_with_citations', result.get('text', 'No response generated'))
+            return result.get('text', result.get('text', 'No response generated'))
             
         except Exception as e:
             return f"Error querying Gemini: {str(e)}"
