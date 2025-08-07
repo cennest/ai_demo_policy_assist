@@ -334,15 +334,15 @@ def main():
         
         /* Alert styling */
         .stAlert {{
-            font-size: 14px;
+            font-size: 10px;
             padding: 0.5rem 1rem;
             border-radius: 6px;
         }}
         
         /* Header hierarchy */
-        h1 {{ font-size: 1.8rem !important; line-height: 1.2; }}
-        h2 {{ font-size: 1.4rem !important; line-height: 1.2; }}
-        h3 {{ font-size: 1.2rem !important; line-height: 1.2; }}
+        h1 {{ font-size: 1.2rem !important; line-height: 1.2; }}
+        h2 {{ font-size: 1.0rem !important; line-height: 1.2; }}
+        h3 {{ font-size: 0.8rem !important; line-height: 1.2; }}
         
         /* Expandable sections */
         .stExpander {{ margin-bottom: 0.5rem; }}
@@ -456,20 +456,19 @@ def main():
                 st.markdown("""
                 <div class="error-container">
                     <h4>🔧 Setup Required</h4>
-                    <p>Complete the following to start chatting:</p>
                 </div>
                 """, unsafe_allow_html=True)
                 for field, error in config_errors.items():
                     st.markdown(f"• {error}")
                 st.divider()
             else:
-                st.markdown("""
-                <div class="success-container">
-                    <h4>✅ Configuration Complete</h4>
-                    <p>Ready to analyze medical policies!</p>
-                </div>
-                """, unsafe_allow_html=True)
-                st.divider()
+                pass
+                # st.markdown("""
+                # <div class="success-container">
+                #     <h4>✅ Configuration Complete</h4>
+                # </div>
+                # """, unsafe_allow_html=True)
+                # st.divider()
             
             # Policy Configuration Section
             st.header("📋 Policy Configuration")
