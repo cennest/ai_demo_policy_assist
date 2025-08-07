@@ -104,7 +104,7 @@ class ConfigManager:
         # Check API key
         if not self.config.google_api_key or self.config.google_api_key == "<enter google api key>":
             errors["google_api_key"] = "Google API key is required"
-        elif not (self.config.google_api_key.startswith("AIzaSy") and len(self.config.google_api_key) > 30):
+        elif not (isinstance(self.config.google_api_key, str) and self.config.google_api_key.startswith("AIzaSy") and len(self.config.google_api_key) > 30):
             errors["google_api_key"] = "Invalid Google API key format"
         
         # Check policy URLs
