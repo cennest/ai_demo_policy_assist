@@ -248,7 +248,7 @@ class GoogleGenAI:
         result = {
             'text': original_text,
             'citations': citations,
-            'text_with_citations' : original_text
+            'text_with_citations' : "text_with_citations"
         }
             
         return result

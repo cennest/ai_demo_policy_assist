@@ -66,48 +66,7 @@ class PolicyChatApp:
         except Exception as e:
             return f"Error querying Gemini: {str(e)}"
 
-    def query_with_context(self, user_message: str) -> str:
-        """Async implementation of query_with_context"""
-        try:
-            # Build prompt with system context and history
-            if self.config.system_prompt.strip():
-                system_prompt = self.config.system_prompt
-            else:
-                system_prompt = """Your job is to extract the most relevant information from the provided context URLs to answer user questions. Always use evidence-based answers from the given policy documents. Refer to chat history to maintain contextual awareness. When answering, use only information supported by the provided context URLs."""
-            
-            # Build the full prompt
-            full_prompt = f"\n\nAsk: {user_message}\n"
-            
-            # Add URLs context if enabled
-            urls = self.config.policy_urls
-            if self.config.url_context_tool and urls:
-                url_context = "\n\nUse the following URLs as context:\n" + "\n".join(f"- {url}" for url in urls)
-                full_prompt = full_prompt + "\n\n" + url_context
- 
-            # Add recent conversation history (if enabled)
-            if self.config.include_chat_history and self.chat_history:
-                max_messages = self.config.max_history_messages
-                recent_messages = self.chat_history[-max_messages:]
-                history_text = "\n\nConversation History:\n"
-                for msg in recent_messages:
-                    role = "User" if msg["role"] == "user" else "Assistant"
-                    history_text += f"{role}: {msg['content']}\n"
-                full_prompt = history_text + "\n\n" + full_prompt
-            
-            # Use the enhanced search method with URL context
-            result = self.model.search_sync(
-                prompt=full_prompt,
-                system_prompt=system_prompt,
-                temperature=0.1,
-                include_google_search=False,  # Focus on URL context for policies
-                include_url_context=self.config.url_context_tool
-            )
-            
-            # Return the text with inline citations if available
-            return result.get('text_with_citations', result.get('text', 'No response generated'))
-            
-        except Exception as e:
-            return f"Error querying Gemini: {str(e)}"
+    
     
     def add_to_memory(self, user_message: str, ai_response: str):
         """Add messages to conversation history"""
