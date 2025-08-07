@@ -470,6 +470,27 @@ def main():
                 # """, unsafe_allow_html=True)
                 # st.divider()
             
+            
+            # Chat Controls
+            st.header("🎮 Chat Controls")
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                if st.button("🗑️ Clear Chat", use_container_width=True):
+                    st.session_state.messages = []
+                    if 'chat_app' in st.session_state:
+                        chat_app.clear_memory()
+                    st.success("Chat history cleared!")
+                    st.rerun()
+            
+            with col2:
+                if st.button("🔄 Reload Config", use_container_width=True):
+                    try:
+                        config_manager.load_config()
+                        st.success("Configuration reloaded!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Failed to reload config: {str(e)}")
+            
             # Policy Configuration Section
             st.header("📋 Policy Configuration")
             
@@ -674,26 +695,6 @@ def main():
                         config_manager.update_config({"google_api_key": ""})
                         st.warning("⚠️ API Key cleared.")
                         st.rerun()
-            
-            # Chat Controls
-            st.header("🎮 Chat Controls")
-            col1, col2 = st.columns([1, 1])
-            with col1:
-                if st.button("🗑️ Clear Chat", use_container_width=True):
-                    st.session_state.messages = []
-                    if 'chat_app' in st.session_state:
-                        chat_app.clear_memory()
-                    st.success("Chat history cleared!")
-                    st.rerun()
-            
-            with col2:
-                if st.button("🔄 Reload Config", use_container_width=True):
-                    try:
-                        config_manager.load_config()
-                        st.success("Configuration reloaded!")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Failed to reload config: {str(e)}")
             
             # Configuration Details
             with st.expander("📋 Configuration Details", expanded=False):
