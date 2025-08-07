@@ -8,7 +8,8 @@
   "policy_urls": [
     "https://www.aetna.com/cpb/medical/data/700_799/0737.html",
     "https://www.aetna.com/cpb/medical/data/100_199/0165.html",
-    "https://www.aetna.com/cpb/medical/data/1_99/0016.html"
+    "https://www.aetna.com/cpb/medical/data/1_99/0016.html",
+    "https://stagentflow.blob.core.windows.net/assets/ccd_sample_1.xml"
   ],
   "page_title": "Medical Policy Assistant",
   "page_icon": "🏥",
