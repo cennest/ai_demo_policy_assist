@@ -132,7 +132,7 @@ class PolicyChatApp:
             full_prompt = self._build_context_prompt(user_message)
             
             # Log the query attempt (for debugging)
-            st.write(f"🔍 Querying {self.config.gemini_model}...")
+            #st.write(f"🔍 Querying {self.config.gemini_model}...")
             
             # Query the model with timeout and retry logic
             start_time = time.time()
@@ -722,12 +722,12 @@ def main():
             status = chat_app.get_status()
             if status["ready"]:
                 # Memory stats (if chat history exists)
-                if len(st.session_state.messages) > 0:
-                    memory_stats = chat_app.get_memory_stats()
-                    col1, col2, col3 = st.columns(3)
-                    col1.metric("Messages", memory_stats["total_messages"])
-                    col2.metric("Conversations", memory_stats["user_messages"])
-                    col3.metric("Avg Length", f"{memory_stats['average_message_length']} chars")
+                # if len(st.session_state.messages) > 0:
+                #     memory_stats = chat_app.get_memory_stats()
+                #     col1, col2, col3 = st.columns(3)
+                #     col1.metric("Messages", memory_stats["total_messages"])
+                #     col2.metric("Conversations", memory_stats["user_messages"])
+                #     col3.metric("Avg Length", f"{memory_stats['average_message_length']} chars")
                 
                 # Display chat history
                 for message in st.session_state.messages:
