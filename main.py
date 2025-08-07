@@ -1,8 +1,7 @@
 import streamlit as st
-from typing import List
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.schema import HumanMessage, AIMessage, SystemMessage
-from langchain_core.messages import BaseMessage
+import asyncio
+from typing import List, Dict, Any
+from google_gen_ai_client import GoogleGenAI
 from config import ConfigManager
 
 class PolicyChatApp:
@@ -10,66 +9,110 @@ class PolicyChatApp:
         self.config_manager = config_manager
         self.config = config_manager.get_config()
         self.setup_gemini()
-        self.chat_history: List[BaseMessage] = []
+        self.chat_history: List[Dict[str, str]] = []
     
     def setup_gemini(self):
-        """Initialize ChatGoogleGenerativeAI with LangChain"""
+        """Initialize GoogleGenAI with custom client"""
         if not self.config.google_api_key:
             st.warning("Please set GOOGLE_API_KEY before starting chat")
             return
         
-        # Initialize LangChain ChatGoogleGenerativeAI
-        self.model = ChatGoogleGenerativeAI(
-            model=self.config.gemini_model,
-            google_api_key=self.config.google_api_key,
-            temperature=0.1,
-            max_tokens=None,
-            timeout=None,
-            max_retries=2
+        # Initialize custom GoogleGenAI client
+        self.model = GoogleGenAI(
+            api_key=self.config.google_api_key,
+            default_model_id=self.config.gemini_model
         )
     
     def query_with_context(self, user_message: str) -> str:
-        """Query Gemini with URL context and LangChain message history for medical policy information"""
+        """Query Gemini with URL context and enhanced search capabilities for medical policy information (sync)"""
         try:
-            # Build messages list using LangChain message objects
-            messages = []
-            
-            # Add system message with medical policy context
-            # Use configurable system prompt if provided, otherwise use default
+            # Build prompt with system context and history
             if self.config.system_prompt.strip():
                 system_prompt = self.config.system_prompt
             else:
                 system_prompt = """Your job is to extract the most relevant information from the provided context URLs to answer user questions. Always use evidence-based answers from the given policy documents. Refer to chat history to maintain contextual awareness. When answering, use only information supported by the provided context URLs."""
-            messages.append(SystemMessage(content=system_prompt))
             
-            # Add policy URLs context if enabled
-            policy_urls = self.config.policy_urls
-            if self.config.url_context_tool and policy_urls:
-                url_context = "Policy URLs to analyze:\n" + "\n".join(f"- {url}" for url in policy_urls)
-                messages.append(HumanMessage(content=url_context))
+            # Build the full prompt
+            full_prompt = f"\n\nAsk: {user_message}\n"
+            
+            # Add URLs context if enabled
+            urls = self.config.policy_urls
+            if self.config.url_context_tool and urls:
+                url_context = "\n\nUse the following URLs as context:\n" + "\n".join(f"- {url}" for url in urls)
+                full_prompt = full_prompt + "\n\n" + url_context
 
-            # Add recent conversation history
-            if self.chat_history:
+            # Add recent conversation history (if enabled)
+            if self.config.include_chat_history and self.chat_history:
                 max_messages = self.config.max_history_messages
                 recent_messages = self.chat_history[-max_messages:]
-                messages.extend(recent_messages)
+                history_text = "\n\nConversation History:\n"
+                for msg in recent_messages:
+                    role = "User" if msg["role"] == "user" else "Assistant"
+                    history_text += f"{role}: {msg['content']}\n"
+                full_prompt = history_text + "\n\n" + full_prompt
             
+            # Use the enhanced search method with URL context (sync version)
+            result = self.model.search_sync(
+                prompt=full_prompt,
+                system_prompt=system_prompt,
+                temperature=0.1,
+                include_google_search=False,  # Focus on URL context for policies
+                include_url_context=self.config.url_context_tool
+            )
             
-                 
-            messages.append(HumanMessage(content=user_message))
+            # Return the text with inline citations if available
+            return result.get('text_with_citations', result.get('text', 'No response generated'))
             
-            # Invoke the LangChain model with messages
-            response = self.model.invoke(messages)
+        except Exception as e:
+            return f"Error querying Gemini: {str(e)}"
+
+    def query_with_context(self, user_message: str) -> str:
+        """Async implementation of query_with_context"""
+        try:
+            # Build prompt with system context and history
+            if self.config.system_prompt.strip():
+                system_prompt = self.config.system_prompt
+            else:
+                system_prompt = """Your job is to extract the most relevant information from the provided context URLs to answer user questions. Always use evidence-based answers from the given policy documents. Refer to chat history to maintain contextual awareness. When answering, use only information supported by the provided context URLs."""
             
-            return response.content
+            # Build the full prompt
+            full_prompt = f"\n\nAsk: {user_message}\n"
+            
+            # Add URLs context if enabled
+            urls = self.config.policy_urls
+            if self.config.url_context_tool and urls:
+                url_context = "\n\nUse the following URLs as context:\n" + "\n".join(f"- {url}" for url in urls)
+                full_prompt = full_prompt + "\n\n" + url_context
+ 
+            # Add recent conversation history (if enabled)
+            if self.config.include_chat_history and self.chat_history:
+                max_messages = self.config.max_history_messages
+                recent_messages = self.chat_history[-max_messages:]
+                history_text = "\n\nConversation History:\n"
+                for msg in recent_messages:
+                    role = "User" if msg["role"] == "user" else "Assistant"
+                    history_text += f"{role}: {msg['content']}\n"
+                full_prompt = history_text + "\n\n" + full_prompt
+            
+            # Use the enhanced search method with URL context
+            result = self.model.search_sync(
+                prompt=full_prompt,
+                system_prompt=system_prompt,
+                temperature=0.1,
+                include_google_search=False,  # Focus on URL context for policies
+                include_url_context=self.config.url_context_tool
+            )
+            
+            # Return the text with inline citations if available
+            return result.get('text_with_citations', result.get('text', 'No response generated'))
             
         except Exception as e:
             return f"Error querying Gemini: {str(e)}"
     
     def add_to_memory(self, user_message: str, ai_response: str):
         """Add messages to conversation history"""
-        self.chat_history.append(HumanMessage(content=user_message))
-        self.chat_history.append(AIMessage(content=ai_response))
+        self.chat_history.append({"role": "user", "content": user_message})
+        self.chat_history.append({"role": "assistant", "content": ai_response})
         
     def clear_memory(self):
         """Clear conversation history"""
@@ -263,15 +306,26 @@ def main():
         if new_system_prompt != config.system_prompt:
             config_manager.update_config({"system_prompt": new_system_prompt})
         
-        # Max history messages setting
-        new_max_messages = st.number_input(
-            "Max History Messages:", 
-            min_value=1, 
-            max_value=50, 
-            value=config.max_history_messages
+        # Chat history toggle setting
+        new_include_history = st.checkbox(
+            "Include Chat History in LLM Calls",
+            value=config.include_chat_history,
+            help="When enabled, conversation history is sent to the LLM for context. Disable for stateless conversations."
         )
-        if new_max_messages != config.max_history_messages:
-            config_manager.update_config({"max_history_messages": new_max_messages})
+        if new_include_history != config.include_chat_history:
+            config_manager.update_config({"include_chat_history": new_include_history})
+        
+        # Max history messages setting (only show if chat history is enabled)
+        if config.include_chat_history:
+            new_max_messages = st.number_input(
+                "Max History Messages:", 
+                min_value=1, 
+                max_value=50, 
+                value=config.max_history_messages,
+                help="Maximum number of previous messages to include in context"
+            )
+            if new_max_messages != config.max_history_messages:
+                config_manager.update_config({"max_history_messages": new_max_messages})
         
         # Gemini model setting
         model_options = ["gemini-2.5-flash", "gemini-2.0-flash-exp", "gemini-1.5-pro", "gemini-1.5-flash"]
@@ -388,7 +442,8 @@ def main():
             with col1:
                 st.subheader("Model Settings")
                 st.write(f"**Model:** {config.gemini_model}")
-                st.write(f"**Max History:** {config.max_history_messages} messages")
+                st.write(f"**Chat History:** {'Enabled' if config.include_chat_history else 'Disabled'}")
+                st.write(f"**Max History:** {config.max_history_messages} messages" if config.include_chat_history else "**Max History:** N/A (disabled)")
                 st.write(f"**URL Context:** {'Enabled' if config.url_context_tool else 'Disabled'}")
             
             with col2:
@@ -431,7 +486,7 @@ def main():
             
             # Generate response using Gemini with policy context
             with st.chat_message("assistant"):
-                with st.spinner("Analyzing policies and generating response..."):
+                with st.spinner("Analyzing..."):
                     response = st.session_state.chat_app.query_with_context(prompt)
                     st.markdown(response)
             

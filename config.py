@@ -18,6 +18,7 @@ class AppConfig:
     # Chat Settings  
     max_history_messages: int = 50
     system_prompt: str = ""
+    include_chat_history: bool = True
     
     # Policy URLs
     policy_urls: List[str] = None
