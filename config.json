@@ -1,4 +1,5 @@
 {
+  "google_api_key": "AIzaSyCxw0dvpErPm_sPyrhSrod-WBWDzVLg_ng",
   "gemini_model": "gemini-2.5-flash",
   "url_context_tool": true,
   "max_history_messages": 30,
