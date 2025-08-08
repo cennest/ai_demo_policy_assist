@@ -575,7 +575,14 @@ def main():
             # Model and API Settings
             with st.expander("🤖 Model Settings", expanded=False):
                 # Gemini model selection
-                model_options = ["gemini-2.5-flash", "gemini-2.0-flash-exp", "gemini-1.5-pro", "gemini-1.5-flash"]
+                model_options = [
+                    "gemini-2.5-pro",
+                    "gemini-2.5-flash", 
+                    "gemini-2.0-flash",
+                    "gemini-2.0-flash-exp",
+                    "gemini-1.5-pro",
+                    "gemini-1.5-flash"
+                ]
                 try:
                     current_model_idx = model_options.index(config.gemini_model)
                 except ValueError:
