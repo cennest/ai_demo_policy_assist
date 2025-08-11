@@ -2,7 +2,7 @@
 
 import os
 import json
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional, Union
 from dataclasses import dataclass, asdict
 from pathlib import Path
 
@@ -20,8 +20,8 @@ class AppConfig:
     system_prompt: str = ""
     include_chat_history: bool = True
     
-    # Policy URLs
-    policy_urls: List[str] = None
+    # Policy URLs as key-value pairs (URL -> metadata dict)
+    policy_urls: Dict[str, Dict[str, Any]] = None
     
     # UI Settings
     page_title: str = "Policy Chat Assistant"
@@ -32,7 +32,7 @@ class AppConfig:
     
     def __post_init__(self):
         if self.policy_urls is None:
-            self.policy_urls = []
+            self.policy_urls = {}
 
 
 class ConfigManager:
@@ -77,18 +77,19 @@ class ConfigManager:
         except IOError as e:
             print(f"Warning: Could not save config file: {e}")
     
-    def add_policy_url(self, url: str) -> bool:
-        """Add a policy URL to the configuration"""
-        if url and url not in self.config.policy_urls:
-            self.config.policy_urls.append(url)
-            self.save_config()
-            return True
-        return False
+    def save_policy_url(self, url: str, metadata: Dict[str, Any]) -> bool:
+        """Save/update a policy URL with metadata (upsert behavior)"""
+        if not url:
+            return False
+        
+        self.config.policy_urls[url] = metadata
+        self.save_config()
+        return True
     
     def remove_policy_url(self, url: str) -> bool:
         """Remove a policy URL from the configuration"""
         if url in self.config.policy_urls:
-            self.config.policy_urls.remove(url)
+            del self.config.policy_urls[url]
             self.save_config()
             return True
         return False

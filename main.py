@@ -58,7 +58,8 @@ class PolicyChatApp:
             ),
             "last_error": self.last_error,
             "chat_history_count": len(self.chat_history),
-            "policy_urls_count": len(self.config.policy_urls)
+            "policy_urls_count": len(self.config.policy_urls),
+            "enabled_urls_count": len([url for url, meta in self.config.policy_urls.items() if meta.get("enabled", True)])
         }
     
     def refresh_config(self) -> None:
@@ -78,7 +79,7 @@ class PolicyChatApp:
         if self.config.system_prompt and self.config.system_prompt.strip():
             return self.config.system_prompt.strip()
         
-        return """Your job is to extract the most relevant information from the provided context URLs to answer user questions. Always use evidence-based answers from the given policy documents. Refer to chat history to maintain contextual awareness. When answering, use only information supported by the provided context URLs."""
+        return """Your job is to extract the most relevant information from the provided file attachements and context URLs to answer user questions. Always use evidence-based answers from the given policy documents. Refer to chat history to maintain contextual awareness. When answering, use only information supported by the provided context URLs."""
     
     def _build_context_prompt(self, user_message: str) -> str:
         """Build the complete prompt with context and history"""
@@ -98,13 +99,21 @@ class PolicyChatApp:
                     prompt_parts.append(f"{role}: {content}")
                 prompt_parts.append("")
         
-        # Add URLs context if enabled
+        # Add URLs context for url_context mode only (and enabled URLs)
         if self.config.url_context_tool and self.config.policy_urls:
-            prompt_parts.append("=== CONTEXT URLS ===")
-            prompt_parts.append("Analyze the following URLs to answer the user's question:")
-            for i, url in enumerate(self.config.policy_urls, 1):
-                prompt_parts.append(f"{i}. {url}")
-            prompt_parts.append("")
+            url_context_urls = []
+            for url, metadata in self.config.policy_urls.items():
+                mode = metadata.get("mode", "url_context")
+                enabled = metadata.get("enabled", True)
+                if mode == "url_context" and enabled:
+                    url_context_urls.append(url)
+            
+            if url_context_urls:
+                prompt_parts.append("=== CONTEXT URLS ===")
+                prompt_parts.append("Analyze the following URLs to answer the user's question:")
+                for i, url in enumerate(url_context_urls, 1):
+                    prompt_parts.append(f"{i}. {url}")
+                prompt_parts.append("")
         
         # Add the current user question
         prompt_parts.append("=== CURRENT QUESTION ===")
@@ -134,6 +143,51 @@ class PolicyChatApp:
             # Log the query attempt (for debugging)
             #st.write(f"🔍 Querying {self.config.gemini_model}...")
             
+            # Prepare file URIs for file_context mode URLs
+            file_uris = []
+            url_context_urls = []
+            
+            if self.config.url_context_tool and self.config.policy_urls:
+                for url, metadata in self.config.policy_urls.items():
+                    mode = metadata.get("mode", "url_context")
+                    enabled = metadata.get("enabled", True)
+                    
+                    if mode == "file_context" and enabled:
+                        try:
+                            # Check if complete file object is cached in metadata
+                            cached_file_data = metadata.get("file_object")
+                            if cached_file_data:
+                                try:
+                                    # Deserialize File object from cached data
+                                    from google.genai.types import File
+                                    cached_file = File.model_validate(cached_file_data)
+                                    file_uris.append(cached_file)
+                                except Exception as deserialize_error:
+                                    st.warning(f"Failed to deserialize cached file: {deserialize_error}")
+                                    # Fall back to re-upload if deserialization fails
+                                    file_obj = self.model.download_and_upload_url_sync(url)
+                                    if file_obj:
+                                        file_uris.append(file_obj)
+                                        # Cache the complete file object with datetime serialization
+                                        updated_metadata = metadata.copy()
+                                        updated_metadata["file_object"] = file_obj.model_dump(mode='json')
+                                        updated_metadata["file_uri"] = file_obj.uri  # Keep URI for display
+                                        self.config_manager.save_policy_url(url, updated_metadata)
+                            else:
+                                # Download and upload URL content to Gemini
+                                file_obj = self.model.download_and_upload_url_sync(url)
+                                if file_obj:
+                                    file_uris.append(file_obj)
+                                    # Cache the complete file object with datetime serialization
+                                    updated_metadata = metadata.copy()
+                                    updated_metadata["file_object"] = file_obj.model_dump(mode='json')
+                                    updated_metadata["file_uri"] = file_obj.uri  # Keep URI for display
+                                    self.config_manager.save_policy_url(url, updated_metadata)
+                        except Exception as e:
+                            st.warning(f"Failed to process {url}: {str(e)}")
+                    elif mode == "url_context" and enabled:
+                        url_context_urls.append(url)
+            
             # Query the model with timeout and retry logic
             start_time = time.time()
             
@@ -143,7 +197,8 @@ class PolicyChatApp:
                     system_prompt=system_prompt,
                     temperature=0.1,
                     include_google_search=False,  # Focus on URL context for policies
-                    include_url_context=self.config.url_context_tool
+                    include_url_context=bool(url_context_urls),  # Only if we have url_context URLs
+                    file_uris=file_uris if file_uris else None  # Add uploaded file URIs
                 )
                 
                 query_time = time.time() - start_time
@@ -494,19 +549,37 @@ def main():
             # Policy Configuration Section
             st.header("📋 Policy Configuration")
             
-            # Add new policy URL with validation
+            # Add new policy URL with validation and mode selection
             with st.form("add_url_form", clear_on_submit=True):
                 new_url = st.text_input(
                     "Add Policy URL:", 
                     placeholder="https://example.com/policy",
                     help="Enter a valid URL to a medical policy document"
                 )
+                
+                # Mode selection for URL handling
+                mode_options = ["url_context", "file_context"]
+                selected_mode = st.selectbox(
+                    "Processing Mode:",
+                    options=mode_options,
+                    index=0,
+                    help="""
+                    • url_context: Use Gemini's URL context tool to analyze the URL directly
+                    • file_context: Download content and upload as file to Gemini
+                    """
+                )
+                
                 submitted = st.form_submit_button("Add URL", use_container_width=True)
                 
                 if submitted and new_url:
                     if new_url.startswith(('http://', 'https://')):
-                        if config_manager.add_policy_url(new_url):
-                            st.success(f"✅ Added: {new_url[:50]}...")
+                        # Store URL with metadata
+                        metadata = {
+                            "mode": selected_mode,
+                            "enabled": True  # Default to enabled
+                        }
+                        if config_manager.save_policy_url(new_url, metadata):
+                            st.success(f"✅ Added ({selected_mode}): {new_url[:50]}...")
                             st.rerun()
                         else:
                             st.warning("⚠️ URL already exists")
@@ -517,14 +590,106 @@ def main():
             
             st.subheader("📎 Policy URLs")
             if config.policy_urls:
-                for i, url in enumerate(config.policy_urls):
-                    with st.expander(f"URL {i+1}: {url[:30]}...", expanded=False):
+                for i, (url, metadata) in enumerate(config.policy_urls.items()):
+                    mode = metadata.get("mode", "url_context")
+                    enabled = metadata.get("enabled", True)
+                    
+                    # Status icons
+                    mode_icon = "🔗" if mode == "url_context" else "📄"
+                    status_icon = "✅" if enabled else "❌"
+                    
+                    with st.expander(f"{status_icon} {mode_icon} URL {i+1}: {url[:30]}...", expanded=False):
                         # Display the URL
                         st.code(url, language=None)
                         
-                        # Add delete button
-                        col1, col2 = st.columns([3, 1])
+                        # Controls section
+                        st.markdown("**Controls:**")
+                        col1, col2 = st.columns([1, 1])
+                        
+                        with col1:
+                            # Mode selection
+                            current_mode_idx = 0 if mode == "url_context" else 1
+                            new_mode = st.selectbox(
+                                "Processing Mode:",
+                                options=["url_context", "file_context"],
+                                index=current_mode_idx,
+                                key=f"mode_{i}",
+                                help="url_context: Direct analysis, file_context: Upload as file"
+                            )
+                            
+                            if new_mode != mode:
+                                updated_metadata = metadata.copy()
+                                updated_metadata["mode"] = new_mode
+                                # Clear cache if mode changes
+                                if "file_object" in updated_metadata:
+                                    del updated_metadata["file_object"]
+                                if "file_uri" in updated_metadata:
+                                    del updated_metadata["file_uri"]
+                                config_manager.save_policy_url(url, updated_metadata)
+                                st.success(f"Mode changed to {new_mode}")
+                                st.rerun()
+                        
                         with col2:
+                            # Enable/Disable toggle
+                            new_enabled = st.checkbox(
+                                "Enable for Chat",
+                                value=enabled,
+                                key=f"enabled_{i}",
+                                help="When enabled, this URL will be used in chat responses"
+                            )
+                            
+                            if new_enabled != enabled:
+                                updated_metadata = metadata.copy()
+                                updated_metadata["enabled"] = new_enabled
+                                config_manager.save_policy_url(url, updated_metadata)
+                                status_text = "enabled" if new_enabled else "disabled"
+                                st.success(f"URL {status_text} successfully!")
+                                st.rerun()
+                        
+                        # Display additional metadata
+                        st.markdown("**Metadata:**")
+                        col1, col2 = st.columns([1, 1])
+                        with col1:
+                            for key, value in metadata.items():
+                                if key in ["title", "description"]:
+                                    st.markdown(f"- **{key}:** {value}")
+                        with col2:
+                            for key, value in metadata.items():
+                                if key == "file_uri":
+                                    st.markdown(f"- **{key}:** `{value[:30]}...`" if len(str(value)) > 30 else f"- **{key}:** `{value}`")
+                                elif key == "file_object":
+                                    st.markdown(f"- **{key}:** `Cached`")
+                        
+                        # Status information
+                        if mode == "url_context":
+                            st.info("📝 Uses Gemini's URL context tool to analyze directly")
+                        else:
+                            has_file_object = bool(metadata.get("file_object"))
+                            has_file_uri = bool(metadata.get("file_uri"))
+                            
+                            if has_file_object:
+                                file_status = "✅ Fully Cached (File Object)"
+                            elif has_file_uri:
+                                file_status = "⚠️ URI Cached (Will reconstruct)"
+                            else:
+                                file_status = "⏳ Will upload on next use"
+                            
+                            st.info(f"📁 Downloads content and uploads as file to Gemini ({file_status})")
+                        
+                        # Action buttons
+                        col1, col2, col3 = st.columns([2, 1, 1])
+                        with col2:
+                            if st.button("🔄 Reset", key=f"refresh_{i}", help="Clear cache and re-upload"):
+                                updated_metadata = metadata.copy()
+                                # Clear cache
+                                if "file_object" in updated_metadata:
+                                    del updated_metadata["file_object"]
+                                if "file_uri" in updated_metadata:
+                                    del updated_metadata["file_uri"]
+                                config_manager.save_policy_url(url, updated_metadata)
+                                st.success("Cache cleared!")
+                                st.rerun()
+                        with col3:
                             if st.button("🗑️ Delete", key=f"remove_{i}", help="Delete this URL"):
                                 if config_manager.remove_policy_url(url):
                                     st.success("URL deleted successfully!")
@@ -713,7 +878,8 @@ def main():
                     if config.include_chat_history:
                         st.write(f"**Max History:** {config.max_history_messages} messages")
                     st.write(f"**URL Context:** {'Enabled' if config.url_context_tool else 'Disabled'}")
-                    st.write(f"**Policy URLs:** {len(config.policy_urls)} configured")
+                    enabled_count = len([url for url, meta in config.policy_urls.items() if meta.get("enabled", True)])
+                    st.write(f"**Policy URLs:** {len(config.policy_urls)} configured ({enabled_count} enabled)")
                 
                 with tab2:
                     st.write(f"**Title:** {config.page_title}")

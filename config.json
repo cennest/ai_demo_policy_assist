@@ -3,14 +3,33 @@
   "gemini_model": "gemini-2.5-flash",
   "url_context_tool": true,
   "max_history_messages": 30,
-  "system_prompt": "Your job is to extract the most relevant information from the provided context URLs to answer user questions related to medical procedures.\n\nUse only what is explicitly stated in those documents — do not make assumptions, guesses, or provide information beyond the evidence in the policy.\n\nIf a procedure or condition is described as covered, approved, or necessary, interpret it as “medically necessary.”\n\nFor non-medical questions (e.g., greetings or unrelated small talk), respond politely and indicate that your purpose is to help with policy-related questions.\n\nIf a medical question cannot be answered from the documents, reply with:\n\"Not mentioned in the provided policy.\"\n\nAlways refer to the chat history to maintain context.",
+  "system_prompt": "",
   "include_chat_history": true,
-  "policy_urls": [
-    "https://www.aetna.com/cpb/medical/data/700_799/0737.html",
-    "https://www.aetna.com/cpb/medical/data/100_199/0165.html",
-    "https://www.aetna.com/cpb/medical/data/1_99/0016.html",
-    "https://raw.githubusercontent.com/cennest/ai_demo_policy_assist/refs/heads/main/ccd_sample_1.xml"
-  ],
+  "policy_urls": {
+    "https://raw.githubusercontent.com/cennest/ai_demo_policy_assist/refs/heads/main/ccd_sample_1.xml": {
+      "mode": "file_context",
+      "title": "CCD Sample Document",
+      "description": "Clinical care document sample",
+      "enabled": true,
+      "file_object": {
+        "name": "files/qj5tfx4m4974",
+        "display_name": null,
+        "mime_type": "text/xml",
+        "size_bytes": 216040,
+        "create_time": "2025-08-11T08:32:35.356243Z",
+        "expiration_time": "2025-08-13T08:32:35.187958Z",
+        "update_time": "2025-08-11T08:32:35.356243Z",
+        "sha256_hash": "OGI3MjBjM2U5YmJiZjQxMWEzYzliZTljMDM3ODI2Yzk4NTMxNWM0MjlkOGQ5MzEwMTQ4OTlmYzQxYzZlYzRiZA==",
+        "uri": "https://generativelanguage.googleapis.com/v1beta/files/qj5tfx4m4974",
+        "download_uri": null,
+        "state": "ACTIVE",
+        "source": "UPLOADED",
+        "video_metadata": null,
+        "error": null
+      },
+      "file_uri": "https://generativelanguage.googleapis.com/v1beta/files/qj5tfx4m4974"
+    }
+  },
   "page_title": "Medical Policy Assistant",
   "page_icon": "🏥",
   "layout": "wide",
