@@ -10,7 +10,7 @@
       "mode": "file_context",
       "title": "CCD Sample Document",
       "description": "Clinical care document sample",
-      "enabled": true,
+      "enabled": false,
       "file_object": {
         "name": "files/kccsc7xculzj",
         "display_name": null,
@@ -31,15 +31,99 @@
     },
     "https://www.aetna.com/cpb/medical/data/700_799/0737.html": {
       "mode": "url_context",
-      "enabled": true
+      "enabled": false
     },
     "https://www.aetna.com/cpb/medical/data/100_199/0165.html": {
       "mode": "url_context",
-      "enabled": true
+      "enabled": false
     },
     "https://www.aetna.com/cpb/medical/data/1_99/0016.html": {
       "mode": "url_context",
-      "enabled": true
+      "enabled": false
+    },
+    "https://stagentflow.blob.core.windows.net/assets/VALERIE_ccd.xml": {
+      "mode": "file_context",
+      "enabled": true,
+      "file_object": {
+        "name": "files/dziyqnm7bpor",
+        "display_name": null,
+        "mime_type": "text/xml",
+        "size_bytes": 2042399,
+        "create_time": "2025-08-12T09:10:21.224708Z",
+        "expiration_time": "2025-08-14T09:10:20.863694Z",
+        "update_time": "2025-08-12T09:10:21.224708Z",
+        "sha256_hash": "ZGYyMTQzYWQzNjQ5YjcyY2JlOGMyNTBmYTAyZmZkNTk1ZGM4NmQ0OTRkMDhjYjZjNjY4MjVjYzQ1NDFmYTBjZA==",
+        "uri": "https://generativelanguage.googleapis.com/v1beta/files/dziyqnm7bpor",
+        "download_uri": null,
+        "state": "ACTIVE",
+        "source": "UPLOADED",
+        "video_metadata": null,
+        "error": null
+      },
+      "file_uri": "https://generativelanguage.googleapis.com/v1beta/files/dziyqnm7bpor"
+    },
+    "https://stagentflow.blob.core.windows.net/assets/Allogeneic_Pancreas_Transplant.pdf": {
+      "mode": "file_context",
+      "enabled": true,
+      "file_object": {
+        "name": "files/5v6c8ur3r4cg",
+        "display_name": null,
+        "mime_type": "application/pdf",
+        "size_bytes": 734026,
+        "create_time": "2025-08-12T09:10:24.556028Z",
+        "expiration_time": "2025-08-14T09:10:24.401807Z",
+        "update_time": "2025-08-12T09:10:24.556028Z",
+        "sha256_hash": "ZTFmZGU3YTAzNzdjNmViOWYyM2NjNTA0MjkzZmJkNzVkNjdmMGZjYmY4OWU4YWE2OWI1YjUxZTRhMzAzNTIxYg==",
+        "uri": "https://generativelanguage.googleapis.com/v1beta/files/5v6c8ur3r4cg",
+        "download_uri": null,
+        "state": "ACTIVE",
+        "source": "UPLOADED",
+        "video_metadata": null,
+        "error": null
+      },
+      "file_uri": "https://generativelanguage.googleapis.com/v1beta/files/5v6c8ur3r4cg"
+    },
+    "https://stagentflow.blob.core.windows.net/assets/MelissaChang.xml": {
+      "mode": "file_context",
+      "enabled": true,
+      "file_object": {
+        "name": "files/fox6wni0zguq",
+        "display_name": null,
+        "mime_type": "text/xml",
+        "size_bytes": 9596,
+        "create_time": "2025-08-12T09:23:10.636654Z",
+        "expiration_time": "2025-08-14T09:23:10.245772Z",
+        "update_time": "2025-08-12T09:23:10.636654Z",
+        "sha256_hash": "MDQ1ZTM5MWU4ZWUyMDM5YWNiNDE2YzU4ZmE4Nzg5Y2MyODgzZGRkM2NkYWFmYzBhZDliZTNjZmVkMzVhYzhmMg==",
+        "uri": "https://generativelanguage.googleapis.com/v1beta/files/fox6wni0zguq",
+        "download_uri": null,
+        "state": "ACTIVE",
+        "source": "UPLOADED",
+        "video_metadata": null,
+        "error": null
+      },
+      "file_uri": "https://generativelanguage.googleapis.com/v1beta/files/fox6wni0zguq"
+    },
+    "https://stagentflow.blob.core.windows.net/assets/CPB_0837_-_Shoulder_Arthroplasty_and_Arthrodesis.pdf": {
+      "mode": "file_context",
+      "enabled": true,
+      "file_object": {
+        "name": "files/aun215dudjd5",
+        "display_name": null,
+        "mime_type": "application/pdf",
+        "size_bytes": 4928085,
+        "create_time": "2025-08-12T09:23:16.526609Z",
+        "expiration_time": "2025-08-14T09:23:16.201649Z",
+        "update_time": "2025-08-12T09:23:16.526609Z",
+        "sha256_hash": "NjM0OWY5ZTExNzg2MWM4NmVjY2YyYWUwZTEzOTliMTc1YWE2NTg0NjFkNWQ5NzQ3YmUxNDhmOTk5YTc4NmZmNg==",
+        "uri": "https://generativelanguage.googleapis.com/v1beta/files/aun215dudjd5",
+        "download_uri": null,
+        "state": "ACTIVE",
+        "source": "UPLOADED",
+        "video_metadata": null,
+        "error": null
+      },
+      "file_uri": "https://generativelanguage.googleapis.com/v1beta/files/aun215dudjd5"
     }
   },
   "page_title": "Medical Policy Assistant",
