@@ -10,7 +10,24 @@
       "mode": "file_context",
       "title": "CCD Sample Document",
       "description": "Clinical care document sample",
-      "enabled": true
+      "enabled": true,
+      "file_object": {
+        "name": "files/kccsc7xculzj",
+        "display_name": null,
+        "mime_type": "text/xml",
+        "size_bytes": 216040,
+        "create_time": "2025-08-12T07:39:23.445080Z",
+        "expiration_time": "2025-08-14T07:39:23.233377Z",
+        "update_time": "2025-08-12T07:39:23.445080Z",
+        "sha256_hash": "OGI3MjBjM2U5YmJiZjQxMWEzYzliZTljMDM3ODI2Yzk4NTMxNWM0MjlkOGQ5MzEwMTQ4OTlmYzQxYzZlYzRiZA==",
+        "uri": "https://generativelanguage.googleapis.com/v1beta/files/kccsc7xculzj",
+        "download_uri": null,
+        "state": "ACTIVE",
+        "source": "UPLOADED",
+        "video_metadata": null,
+        "error": null
+      },
+      "file_uri": "https://generativelanguage.googleapis.com/v1beta/files/kccsc7xculzj"
     },
     "https://www.aetna.com/cpb/medical/data/700_799/0737.html": {
       "mode": "url_context",
