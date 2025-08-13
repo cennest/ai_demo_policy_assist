@@ -4,6 +4,7 @@ import streamlit as st
 from typing import List, Dict, Any, Optional
 from google_gen_ai_client import GoogleGenAI
 from config import ConfigManager
+from file_metadata_validator import FileMetadataValidator, SecureFileManager
 
 class PolicyChatApp:
     def __init__(self, config_manager: ConfigManager):
@@ -12,6 +13,8 @@ class PolicyChatApp:
         self.model: Optional[GoogleGenAI] = None
         self.chat_history: List[Dict[str, str]] = []
         self.last_error: Optional[str] = None
+        self.file_validator: Optional[FileMetadataValidator] = None
+        self.secure_file_manager: Optional[SecureFileManager] = None
         self.setup_gemini()
     
     def setup_gemini(self) -> bool:
@@ -33,6 +36,13 @@ class PolicyChatApp:
                 default_model_id=self.config.gemini_model
             )
             
+            # Initialize file validation components
+            self.file_validator = FileMetadataValidator(self.config_manager)
+            self.secure_file_manager = SecureFileManager(self.config_manager, self.config.google_api_key)
+            
+            # Perform automatic cleanup of expired files
+            self._cleanup_expired_files()
+            
             self.last_error = None
             return True
             
@@ -40,6 +50,41 @@ class PolicyChatApp:
             self.last_error = f"Failed to initialize Gemini client: {str(e)}"
             self.model = None
             return False
+    
+    def _cleanup_expired_files(self) -> None:
+        """Cleanup expired file metadata automatically"""
+        try:
+            if self.file_validator:
+                cleaned_urls = self.file_validator.cleanup_expired_files()
+                if cleaned_urls:
+                    # Log cleanup activity but don't show to user unless debug mode
+                    print(f"Auto-cleanup: Removed {len(cleaned_urls)} expired file metadata entries")
+        except Exception as e:
+            print(f"Warning: Auto-cleanup failed: {e}")
+    
+    def _reupload_and_cache_file(self, url: str, metadata: Dict[str, Any]):
+        """Re-upload file and cache with secure validation"""
+        try:
+            # Download and upload URL content to Gemini
+            file_obj = self.model.download_and_upload_url_sync(url)
+            if file_obj:
+                # Create updated metadata with file object
+                updated_metadata = metadata.copy()
+                updated_metadata["file_object"] = file_obj.model_dump(mode='json')
+                updated_metadata["file_uri"] = file_obj.uri  # Keep URI for display
+                
+                # Use secure file manager to save with validation
+                if self.secure_file_manager:
+                    self.secure_file_manager.secure_save_file_metadata(url, updated_metadata)
+                else:
+                    # Fallback to regular save
+                    self.config_manager.save_policy_url(url, updated_metadata)
+                
+                return file_obj
+        except Exception as e:
+            print(f"Error re-uploading file for {url}: {e}")
+        
+        return None
     
     def is_ready(self) -> bool:
         """Check if the chat app is ready to process queries"""
@@ -154,9 +199,14 @@ class PolicyChatApp:
                     
                     if mode == "file_context" and enabled:
                         try:
-                            # Check if complete file object is cached in metadata
-                            cached_file_data = metadata.get("file_object")
-                            if cached_file_data:
+                            # Use secure file manager to get validated metadata
+                            valid_metadata = None
+                            if self.secure_file_manager:
+                                valid_metadata = self.secure_file_manager.get_valid_file_metadata(url)
+                            
+                            # Check if we have valid cached file data
+                            if valid_metadata and "file_object" in valid_metadata:
+                                cached_file_data = valid_metadata["file_object"]
                                 try:
                                     # Deserialize File object from cached data
                                     from google.genai.types import File
@@ -164,25 +214,15 @@ class PolicyChatApp:
                                     file_uris.append(cached_file)
                                 except Exception as deserialize_error:
                                     st.warning(f"Failed to deserialize cached file: {deserialize_error}")
-                                    # Fall back to re-upload if deserialization fails
-                                    file_obj = self.model.download_and_upload_url_sync(url)
+                                    # Clear invalid cache and re-upload
+                                    file_obj = self._reupload_and_cache_file(url, metadata)
                                     if file_obj:
                                         file_uris.append(file_obj)
-                                        # Cache the complete file object with datetime serialization
-                                        updated_metadata = metadata.copy()
-                                        updated_metadata["file_object"] = file_obj.model_dump(mode='json')
-                                        updated_metadata["file_uri"] = file_obj.uri  # Keep URI for display
-                                        self.config_manager.save_policy_url(url, updated_metadata)
                             else:
-                                # Download and upload URL content to Gemini
-                                file_obj = self.model.download_and_upload_url_sync(url)
+                                # No valid cache - download and upload URL content to Gemini
+                                file_obj = self._reupload_and_cache_file(url, metadata)
                                 if file_obj:
                                     file_uris.append(file_obj)
-                                    # Cache the complete file object with datetime serialization
-                                    updated_metadata = metadata.copy()
-                                    updated_metadata["file_object"] = file_obj.model_dump(mode='json')
-                                    updated_metadata["file_uri"] = file_obj.uri  # Keep URI for display
-                                    self.config_manager.save_policy_url(url, updated_metadata)
                         except Exception as e:
                             st.warning(f"Failed to process {url}: {str(e)}")
                     elif mode == "url_context" and enabled:
@@ -293,6 +333,37 @@ class PolicyChatApp:
             "total_characters": total_chars,
             "average_message_length": total_chars // len(self.chat_history) if self.chat_history else 0
         }
+    
+    def get_security_status(self) -> Dict[str, Any]:
+        """Get security status of file metadata"""
+        if not self.secure_file_manager:
+            return {"status": "unavailable", "message": "Security manager not initialized"}
+        
+        try:
+            return self.secure_file_manager.perform_security_check()
+        except Exception as e:
+            return {"status": "error", "message": f"Security check failed: {str(e)}"}
+    
+    def delete_all_gemini_files_and_reset_metadata(self) -> Dict[str, Any]:
+        """Delete all files from Gemini and reset metadata"""
+        if not self.secure_file_manager or not self.model:
+            return {"status": "error", "message": "File manager or model not initialized"}
+        
+        try:
+            return self.secure_file_manager.delete_all_files_and_reset(self.model)
+        except Exception as e:
+            return {"status": "error", "message": f"Delete operation failed: {str(e)}"}
+    
+    def list_all_gemini_files(self) -> List[Dict[str, Any]]:
+        """List all files currently in Gemini Files API"""
+        if not self.secure_file_manager or not self.model:
+            return []
+        
+        try:
+            return self.secure_file_manager.list_gemini_files(self.model)
+        except Exception as e:
+            print(f"Error listing Gemini files: {e}")
+            return []
 
 def get_or_create_chat_app(config_manager: ConfigManager) -> PolicyChatApp:
     """Get existing chat app or create new one if config changed"""
@@ -696,6 +767,95 @@ def main():
                                     st.rerun()
             else:
                 st.info("No policy URLs configured yet")
+            
+            # File Management Section
+            st.subheader("🗂️ File Management")
+            
+            col1, col2 = st.columns([1, 1])
+            
+            with col1:
+                if st.button("📋 List Files", use_container_width=True, help="List all files in Gemini Files API"):
+                    if 'chat_app' in st.session_state:
+                        try:
+                            files = chat_app.list_all_gemini_files()
+                            if files:
+                                with st.expander(f"📁 Gemini Files ({len(files)} total)", expanded=True):
+                                    for i, file_info in enumerate(files):
+                                        file_name = file_info.get('name', 'Unknown')
+                                        file_size = file_info.get('size_bytes', 0)
+                                        mime_type = file_info.get('mime_type', 'Unknown')
+                                        create_time = file_info.get('create_time', 'Unknown')
+                                        
+                                        st.markdown(f"""
+                                        **File {i+1}:**
+                                        - Name: `{file_name}`
+                                        - Size: {file_size:,} bytes
+                                        - Type: {mime_type}
+                                        - Created: {create_time[:19] if create_time != 'Unknown' else 'Unknown'}
+                                        """)
+                            else:
+                                st.info("No files found in Gemini Files API")
+                        except Exception as e:
+                            st.error(f"Failed to list files: {e}")
+                    else:
+                        st.warning("Chat app not initialized")
+            
+            with col2:
+                if st.button("🗑️ Delete All Files", use_container_width=True, help="Delete all files from Gemini and reset metadata", type="secondary"):
+                    if 'chat_app' in st.session_state:
+                        try:
+                            results = chat_app.delete_all_gemini_files_and_reset_metadata()
+                            
+                            if results.get('status') == 'error':
+                                st.error(f"Operation failed: {results.get('message')}")
+                            else:
+                                # Show results
+                                st.success("🎉 Operation completed!")
+                                
+                                col_a, col_b = st.columns(2)
+                                with col_a:
+                                    st.metric("Files Deleted", results.get('files_deleted', 0))
+                                    st.metric("Failed Deletions", results.get('files_failed', 0))
+                                with col_b:
+                                    st.metric("URLs Reset", results.get('urls_reset', 0))
+                                
+                                if results.get('failed_files'):
+                                    with st.expander("⚠️ Failed Deletions"):
+                                        for failed_file in results['failed_files']:
+                                            st.text(f"- {failed_file}")
+                            
+                            # Reset confirmation flag
+                            st.session_state.confirm_delete_all = False
+                            
+                        except Exception as e:
+                            st.error(f"Operation failed: {e}")
+                            st.session_state.confirm_delete_all = False
+                    else:
+                        st.warning("Chat app not initialized")
+            
+            # Security Status Display
+            if 'chat_app' in st.session_state and chat_app.get_status()["ready"]:
+                with st.expander("🔒 Security Status", expanded=False):
+                    try:
+                        security_status = chat_app.get_security_status()
+                        if security_status.get('status') == 'error':
+                            st.error(f"Security check failed: {security_status.get('message')}")
+                        else:
+                            col_a, col_b, col_c = st.columns(3)
+                            with col_a:
+                                st.metric("Total URLs", security_status.get('total_urls', 0))
+                                st.metric("Valid Files", security_status.get('valid_files', 0))
+                            with col_b:
+                                st.metric("Expired Files", security_status.get('expired_files', 0))
+                                st.metric("Invalid Hash", security_status.get('invalid_hash_files', 0))
+                            with col_c:
+                                st.metric("Missing Files", security_status.get('missing_files', 0))
+                            
+                            if security_status.get('cleaned_urls'):
+                                st.warning(f"⚠️ {len(security_status['cleaned_urls'])} URLs were cleaned up during last check")
+                                
+                    except Exception as e:
+                        st.error(f"Security status error: {e}")
             
             st.divider()
             
